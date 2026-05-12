@@ -60,6 +60,11 @@ else
 fi
 EOF
 
+# SSH server
+mkdir -p /var/run/sshd
+sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
 # Supervisor
 CONF_PATH=/etc/supervisor/conf.d/supervisord.conf
 cat << EOF > $CONF_PATH
@@ -70,12 +75,18 @@ user=root
 command=gosu '$USER' bash '$VNCRUN_PATH'
 [program:novnc]
 command=gosu '$USER' bash -c "websockify --web=/usr/lib/novnc 80 localhost:5901"
+[program:sshd]
+command=/usr/sbin/sshd -D
 EOF
 
 # colcon
 BASHRC_PATH="$HOME/.bashrc"
 grep -F "source /opt/ros/$ROS_DISTRO/setup.bash" "$BASHRC_PATH" || echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> "$BASHRC_PATH"
 grep -F "export ROS_AUTOMATIC_DISCOVERY_RANGE=" "$BASHRC_PATH" || echo "# export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST" >> "$BASHRC_PATH"
+chown "$USER:$USER" "$BASHRC_PATH"
+
+# TurtleBot3 environment
+grep -F "export TURTLEBOT3_MODEL=" "$BASHRC_PATH" || echo "export TURTLEBOT3_MODEL=burger" >> "$BASHRC_PATH"
 chown "$USER:$USER" "$BASHRC_PATH"
 
 # Fix rosdep permission

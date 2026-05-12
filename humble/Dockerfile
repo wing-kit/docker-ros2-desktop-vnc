@@ -44,7 +44,8 @@ RUN apt-get update && \
         supervisor wget curl gosu git sudo python3-pip tini \
         build-essential vim sudo lsb-release locales \
         bash-completion tzdata terminator \
-        dos2unix && \
+        dos2unix \
+        openssh-server && \
     apt-get autoclean && \
     apt-get autoremove && \
     rm -rf /var/lib/apt/lists/*
@@ -111,6 +112,22 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     apt-get install -y \
     ros-${ROS_DISTRO}-gazebo-ros-pkgs \
     ros-${ROS_DISTRO}-ros-ign && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Install TurtleBot3 packages (amd64 only; depends on Gazebo Classic)
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+    apt-get update -q && \
+    apt-get install -y \
+    ros-${ROS_DISTRO}-turtlebot3 \
+    ros-${ROS_DISTRO}-turtlebot3-msgs \
+    ros-${ROS_DISTRO}-turtlebot3-simulations \
+    ros-${ROS_DISTRO}-turtlebot3-gazebo \
+    ros-${ROS_DISTRO}-turtlebot3-teleop \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-nav2-bringup \
+    ros-${ROS_DISTRO}-cartographer \
+    ros-${ROS_DISTRO}-cartographer-ros && \
     rm -rf /var/lib/apt/lists/*; \
     fi
 

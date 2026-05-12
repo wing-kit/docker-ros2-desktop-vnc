@@ -29,13 +29,61 @@ Change the `shm-size` value depending on the situation.
 
 __NOTE__: `--security-opt seccomp=unconfined` flag is required to launch humble image. See https://github.com/Tiryoh/docker-ros2-desktop-vnc/pull/56.
 
-```
-docker run -p 6080:80 --security-opt seccomp=unconfined --shm-size=512m ghcr.io/tiryoh/ros2-desktop-vnc:humble
+```sh
+docker run -p 6080:80 -p 2222:22 --security-opt seccomp=unconfined --shm-size=512m ghcr.io/tiryoh/ros2-desktop-vnc:humble
 ```
 
 Browse http://127.0.0.1:6080/.
 
+To develop your own packages, create a workspace on the host and mount it with `-v` (see [Developing Your Own Packages](#developing-your-own-packages) below).
+
 ![default desktop](https://github.com/user-attachments/assets/29ff479f-de54-4032-995d-d1be244ff4e7)
+
+## macOS
+
+[Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) is required.
+
+### Apple Silicon
+
+Pre-built images for `linux/arm64` are available. Docker automatically selects the matching architecture, so no extra flags are needed on Apple Silicon Macs.
+
+To run:
+
+```sh
+docker run -p 6080:80 -p 2222:22 --security-opt seccomp=unconfined --shm-size=512m ghcr.io/tiryoh/ros2-desktop-vnc:humble
+```
+
+To build natively on Apple Silicon:
+
+```sh
+cd humble && docker build -t tiryoh/ros2-desktop-vnc:humble .
+```
+
+To force the `amd64` image on Apple Silicon (e.g. for compatibility testing), add `--platform linux/amd64`:
+
+```sh
+docker run -p 6080:80 -p 2222:22 --security-opt seccomp=unconfined --platform linux/amd64 --shm-size=2048m tiryoh/ros2-desktop-vnc:humble-amd64
+```
+
+To cross-build for `linux/amd64` from Apple Silicon, use `docker buildx` with the `--platform` flag:
+
+```sh
+cd humble && docker buildx build --platform=linux/amd64 --progress=plain -t tiryoh/ros2-desktop-vnc:humble-amd64 .
+```
+
+### Intel Mac
+
+Use the same commands as the Quick Start and Build sections below. To run the `amd64` image explicitly:
+
+```sh
+docker run -p 6080:80 -p 2222:22 --security-opt seccomp=unconfined --platform linux/amd64 --shm-size=2048m tiryoh/ros2-desktop-vnc:humble-amd64
+```
+
+To build on Intel Mac:
+
+```sh
+cd humble && docker buildx build --platform=linux/amd64 --progress=plain -t tiryoh/ros2-desktop-vnc:humble-amd64 .
+```
 
 ## Build
 
@@ -100,6 +148,75 @@ cd rolling && docker buildx build --platform=linux/amd64 --progress=plain -t tir
 # using "docker buildx" (arm64)
 cd rolling && docker buildx build --platform=linux/arm64 --progress=plain -t tiryoh/ros2-desktop-vnc:rolling-arm64 .
 ```
+
+## TurtleBot3 Simulation
+
+TurtleBot3 simulation packages are pre-installed in the following images.
+
+| Distro | Architectures | Simulator |
+|--------|--------------|-----------|
+| `humble` | `amd64` only | Gazebo Classic |
+| `jazzy`  | `amd64`, `arm64` | Gazebo (gz sim) |
+
+Pre-installed packages include:
+- `turtlebot3`, `turtlebot3-msgs`, `turtlebot3-simulations`, `turtlebot3-gazebo`, `turtlebot3-teleop`
+- `navigation2`, `nav2-bringup`
+- `cartographer`, `cartographer-ros`
+
+### Quick Start
+
+Open a terminal inside the container and launch the TurtleBot3 world:
+
+```sh
+ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+```
+
+In another terminal, run keyboard teleoperation:
+
+```sh
+ros2 run turtlebot3_teleop teleop_keyboard
+```
+
+To launch autonomous navigation with SLAM:
+
+```sh
+ros2 launch nav2_bringup tb3_simulation_launch.py slam:=True
+```
+
+### Changing the Robot Model
+
+The default model is `burger`. You can switch to `waffle` or `waffle_pi` by setting the environment variable before launching:
+
+```sh
+export TURTLEBOT3_MODEL=waffle
+ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+```
+
+> **Note**: On Humble, TurtleBot3 simulation is only available on `amd64` because it depends on Gazebo Classic, which is not pre-installed on the `arm64` image.
+
+## Developing Your Own Packages
+
+To develop your own ROS 2 packages, create a workspace on your host machine and mount it into the container. This keeps your source code on the host while the container provides the build environment.
+
+```sh
+mkdir -p ~/ros2_ws/src
+docker run -p 6080:80 -p 2222:22 -v ~/ros2_ws:/home/ubuntu/ros2_ws --security-opt seccomp=unconfined --shm-size=2048m ghcr.io/tiryoh/ros2-desktop-vnc:humble
+```
+
+Inside the container, the workspace is available at `/home/ubuntu/ros2_ws`. You can build packages with `colcon build` and they persist on your host.
+
+## VS Code Remote Development
+
+An SSH server is included so you can use [VS Code Remote - SSH](https://code.visualstudio.com/docs/remote/ssh) for a native IDE experience.
+
+1. Start the container with SSH port forwarded (e.g., `-p 2222:22`).
+2. In VS Code, run `Remote-SSH: Connect to Host...` and enter:
+   ```
+   ssh ubuntu@localhost -p 2222
+   ```
+3. Use the password `ubuntu` (or the `PASSWORD` you set).
+
+Once connected, open `/home/ubuntu/ros2_ws` and install the ROS extension for syntax highlighting and IntelliSense.
 
 ## Docker tags on hub.docker.com
 

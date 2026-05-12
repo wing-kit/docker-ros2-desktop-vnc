@@ -53,7 +53,8 @@ RUN apt-get update && \
         tigervnc-standalone-server tigervnc-common \
         supervisor wget curl gosu git sudo python3-full python3-pip tini \
         build-essential vim sudo lsb-release locales \
-        bash-completion tzdata terminator && \
+        bash-completion tzdata terminator \
+        openssh-server && \
     apt-get autoclean && \
     apt-get autoremove && \
     rm -rf /var/lib/apt/lists/*
@@ -120,6 +121,20 @@ RUN rosdep update
 RUN apt-get update -q && \
     apt-get install -y \
     ros-${ROS_DISTRO}-ros-gz && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install TurtleBot3 packages
+RUN apt-get update -q && \
+    apt-get install -y \
+    ros-${ROS_DISTRO}-turtlebot3 \
+    ros-${ROS_DISTRO}-turtlebot3-msgs \
+    ros-${ROS_DISTRO}-turtlebot3-simulations \
+    ros-${ROS_DISTRO}-turtlebot3-gazebo \
+    ros-${ROS_DISTRO}-turtlebot3-teleop \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-nav2-bringup \
+    ros-${ROS_DISTRO}-cartographer \
+    ros-${ROS_DISTRO}-cartographer-ros && \
     rm -rf /var/lib/apt/lists/*
 
 # Enable apt-get completion after running `apt-get update` in the container
