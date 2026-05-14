@@ -1,6 +1,14 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Features
+- Add redis-server, python3-tk, htop, tmux, nano to Humble image
+- Add Python redis package (pip3 install redis)
+- Update Ubuntu base image to jammy-20251013
+
+### Added
+- `humble/Dockerfile.with-deps` - Lightweight variant with additional ROS2 packages for neo_simulation2
+
 <a name="v2.0.0"></a>
 ## [v2.0.0] - 2023-09-10
 ### CI

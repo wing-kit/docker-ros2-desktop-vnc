@@ -1,0 +1,132 @@
+# Copyright 2020-2023 Tiryoh<tiryoh@gmail.com>
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM ubuntu:jammy-20251013
+
+LABEL maintainer="Tiryoh<tiryoh@gmail.com>"
+
+SHELL ["/bin/bash","-lc"]
+ARG ROS_DISTRO=humble
+ARG USERNAME=ubuntu
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Install language
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+ENV LANG=en_US.UTF-8
+
+# Install timezone
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Install ROS2
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    gnupg2 \
+    lsb-release \
+    software-properties-common \
+    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+    ros-${ROS_DISTRO}-desktop \
+    python3-argcomplete \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    python3-vcstool \
+    python3-pip \
+    python3-tk \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN rosdep init || echo "rosdep already initialized"
+
+ARG TARGETPLATFORM
+
+RUN echo "Target platform: $TARGETPLATFORM"
+
+# Install the necessary packages for simulation and navigation
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ros-${ROS_DISTRO}-gazebo-ros-pkgs \
+    ros-${ROS_DISTRO}-cartographer \
+    ros-${ROS_DISTRO}-cartographer-ros && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Enable apt-get completion after running `apt-get update` in the container
+RUN rm /etc/apt/apt.conf.d/docker-clean
+
+COPY ./entrypoint.sh /
+RUN apt-get update && apt-get install -y --no-install-recommends dos2unix && dos2unix /entrypoint.sh && rm -rf /var/lib/apt/lists/*
+ENTRYPOINT [ "/bin/bash", "-c", "/entrypoint.sh" ]
+
+ENV USER ubuntu
+ENV PASSWD ubuntu
+
+# ============================================
+# Additional dependencies for neo_simulation2 and laserline
+# ============================================
+
+# Install system packages for laserline and general tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libhiredis-dev \
+    libncurses-dev \
+    redis-server \
+    git \
+    nano \
+    vim \
+    htop \
+    tmux \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir redis
+
+# Install ROS2 packages for neo_simulation2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-${ROS_DISTRO}-launch-ros \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-slam-toolbox \
+    ros-${ROS_DISTRO}-neo-nav2-bringup \
+    ros-${ROS_DISTRO}-gazebo-ros \
+    ros-${ROS_DISTRO}-ur-description \
+    ros-${ROS_DISTRO}-controller-manager \
+    ros-${ROS_DISTRO}-gazebo-ros2-control \
+    ros-${ROS_DISTRO}-ros2-control \
+    ros-${ROS_DISTRO}-ros2-controllers \
+    ros-${ROS_DISTRO}-robotiq-description \
+    ros-${ROS_DISTRO}-joint-state-publisher \
+    ros-${ROS_DISTRO}-joint-state-publisher-gui \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure Redis to run in background
+RUN sed -i 's/supervised no/supervised systemd/' /etc/redis/redis.conf || true \
+    && sed -i 's/bind 127.0.0.1 ::1/bind 0.0.0.0/' /etc/redis/redis.conf || true
+
+# Create workspace directory
+RUN mkdir -p /home/ubuntu/ros2_ws/src
+
+# Add Redis startup to entrypoint (will be handled by entrypoint.sh modification if needed)
+# For now, Redis can be started manually or via docker-compose

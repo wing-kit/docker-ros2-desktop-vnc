@@ -87,7 +87,21 @@ cd humble && docker buildx build --platform=linux/amd64 --progress=plain -t tiry
 
 ## Build
 
-To build Docker image from this Dockerfile, run the following command.
+### Humble (with AIC dependencies)
+
+Build the full desktop image with additional dependencies (redis-server, python3-tk, htop, tmux, nano, Python redis package):
+
+```sh
+cd humble && docker build -f Dockerfile -t tiryoh/ros2-desktop-vnc:humble-aic .
+```
+
+Build the lightweight variant with additional ROS2 packages for neo_simulation2:
+
+```sh
+cd humble && docker build -f Dockerfile.with-deps -t tiryoh/ros2-desktop-vnc:humble-aic .
+```
+
+### Other ROS2 distributions
 
 * dashing (deprecated)
 ```sh

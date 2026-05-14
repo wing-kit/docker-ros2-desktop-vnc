@@ -45,10 +45,18 @@ RUN apt-get update && \
         build-essential vim sudo lsb-release locales \
         bash-completion tzdata terminator \
         dos2unix \
-        openssh-server && \
+        openssh-server \
+        redis-server \
+        python3-tk \
+        htop \
+        tmux \
+        nano && \
     apt-get autoclean && \
     apt-get autoremove && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir redis
 
 # noVNC and Websockify
 RUN git clone https://github.com/AtsushiSaito/noVNC.git -b add_clipboard_support /usr/lib/novnc
